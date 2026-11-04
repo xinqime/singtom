@@ -1,0 +1,53 @@
+services:
+  app:
+    image: app:latest
+    build: ./app
+    container_name: my-vue-app
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+    depends_on:
+      - server
+    networks: 
+      - my-net
+
+  server:
+    image: server:latest
+    build: ./server
+    container_name: my-go-server
+    restart: unless-stopped
+    environment:
+      PORT: "8090"
+      BLUEPRINT_DB_HOST: mysql_bp
+      BLUEPRINT_DB_PORT: "3306"
+      BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
+      BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
+      BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+    ports:
+      - "${PORT:-8090}:8090"
+    depends_on:
+      - mysql_bp
+    networks: 
+      - my-net
+
+  mysql_bp:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${BLUEPRINT_DB_DATABASE}
+      MYSQL_USER: ${BLUEPRINT_DB_USERNAME}
+      MYSQL_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${BLUEPRINT_DB_ROOT_PASSWORD}
+    ports:
+      - "${BLUEPRINT_DB_PORT}:3306"
+    volumes:
+      - mysql_volume_bp:/var/lib/mysql
+    networks: 
+      - my-net
+
+networks:
+  my-net:
+
+volumes:
+  mysql_volume_bp:
