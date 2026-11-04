@@ -1,0 +1,99 @@
+# Singtom
+
+Singtom 是一个由多个独立开源仓库组成的项目。当前由前端、后端和临时欢迎页三个模块构成；本仓库作为整体入口，提供模块说明、Docker Compose 编排和统一启动方式。
+
+## 项目模块
+
+| 目录 | 模块 | 说明 | 独立仓库 |
+| --- | --- | --- | --- |
+| `app/` | 前端 | Vue 3 + Vite 客户端，负责页面和用户交互。 | [xinqime/app](https://github.com/xinqime/app) |
+| `server/` | 后端 | Go API 服务，负责后端接口和 MySQL 数据访问。 | [xinqime/server](https://github.com/xinqime/server) |
+| `welcome/` | 临时欢迎页 | 项目的临时静态欢迎页面和图片资源；当前不参与 Docker Compose 主应用部署。 | [xinqime/welcome](https://github.com/xinqime/welcome) |
+
+`app`、`server` 和 `welcome` 各自维护 Git 历史和远程仓库。本仓库负责将前端、后端与 MySQL 组合运行；模块源码需要分别克隆到对应目录。
+
+目前仅实现前端模块，支持全功能mock演示，后端模块待实现。
+
+### 克隆完整项目
+
+```bash
+git clone https://github.com/xinqime/singtom.git
+cd singtom
+
+git clone https://github.com/xinqime/app.git app
+git clone https://github.com/xinqime/server.git server
+git clone https://github.com/xinqime/welcome.git welcome
+```
+
+克隆后目录结构如下：
+
+```text
+singtom/
+├── app/                 # 前端独立仓库
+├── server/              # 后端独立仓库
+├── welcome/             # 临时欢迎页独立仓库
+├── docker-compose.yml   # 整体服务编排入口
+├── .env                 # 本地运行配置
+└── LICENSE
+```
+
+## 运行架构
+
+```text
+浏览器
+  └── 前端容器（Nginx，宿主机端口 80）
+        ├── 页面请求 → Vue 前端静态资源
+        └── /api 请求 → 后端容器（容器端口 8090）
+                             └── MySQL 容器（容器端口 3306）
+```
+
+Compose 在根目录的 `docker-compose.yml` 中构建并启动 `app`、`server` 和 `mysql_bp`。前端 Nginx 将 `/api/` 请求转发给后端；后端通过 Compose 网络连接 MySQL。默认情况下，前端地址为 `http://localhost`，后端 API 映射到宿主机 `8090` 端口。
+
+## 使用 Docker Compose 启动
+
+在项目根目录创建或检查 `.env` 文件，配置数据库和端口。至少需要提供以下变量：
+
+```dotenv
+PORT=8090
+BLUEPRINT_DB_PORT=3306
+BLUEPRINT_DB_DATABASE=singtom
+BLUEPRINT_DB_USERNAME=singtom
+BLUEPRINT_DB_PASSWORD=请替换为安全密码
+BLUEPRINT_DB_ROOT_PASSWORD=请替换为安全的root密码
+```
+
+Compose 会将容器内后端数据库地址设置为 `mysql_bp`，容器内数据库端口为 `3306`。`PORT` 是后端在宿主机映射使用的端口（默认 `8090`）；`BLUEPRINT_DB_PORT` 是 MySQL 在宿主机映射使用的端口。请勿将真实凭据提交到公开仓库。
+
+启动并构建服务：
+
+```bash
+docker compose up --build -d
+```
+
+- 前端：<http://localhost>
+- 后端：<http://localhost:8090>（如果修改了 `PORT`，请使用相应端口）
+
+查看服务状态和日志：
+
+```bash
+docker compose ps
+docker compose logs -f
+```
+
+停止服务：
+
+```bash
+docker compose down
+```
+
+MySQL 数据保存在 Docker 命名卷 `mysql_volume_bp` 中；普通的 `docker compose down` 不会删除该数据卷。
+
+## 单独开发模块
+
+- 前端安装依赖、启动和构建方式请参阅 [`app/README.md`](app/README.md)。
+- 后端运行、构建和测试方式请参阅 [`server/README.md`](server/README.md)。
+- 欢迎页目前是临时静态资源，位于 `welcome/`。
+
+## 许可证
+
+本项目采用 MIT License，详见 [LICENSE](LICENSE)。
